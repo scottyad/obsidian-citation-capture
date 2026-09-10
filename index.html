@@ -97,6 +97,7 @@
             <li>Local Ollama AI</li>
             <li>Direct Obsidian sync</li>
           </ul>
+          <button class="btn btn-secondary" style="margin-top:1rem; display:inline-block; cursor:pointer;" onclick="startCheckout('pro')">Subscribe</button>
         </div>
         <div class="price-card popular">
           <div class="badge">Best Value</div>
@@ -108,15 +109,96 @@
             <li>Cloud Claude AI included</li>
             <li>All future updates</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="margin-top:1rem; display:inline-block;">Buy Now</a>
+          <button class="btn btn-primary" style="margin-top:1rem; display:inline-block; cursor:pointer;" onclick="startCheckout('lifetime')">Buy Now</button>
         </div>
       </div>
     </section>
+
+    <!-- Checkout Success Modal -->
+    <div id="success-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+      <div style="background:#16213e; border:2px solid #e94560; border-radius:12px; padding:2rem; max-width:500px; text-align:center;">
+        <h2 style="color:#e94560; margin-bottom:1rem;">🎉 Thank You!</h2>
+        <p id="success-message">Your payment was successful. Check your email for your license key!</p>
+        <div id="license-display" style="display:none; margin:1rem 0; padding:1rem; background:#0f3460; border-radius:8px;">
+          <code id="license-key" style="font-size:1.2em; color:#16c79a;"></code>
+          <button onclick="copyLicense()" style="margin-left:1rem; background:#e94560; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">Copy</button>
+        </div>
+        <button onclick="closeModal()" style="margin-top:1rem; background:transparent; border:2px solid #e94560; color:#e94560; padding:0.75rem 1.5rem; border-radius:8px; cursor:pointer;">Close</button>
+      </div>
+    </div>
 
     <footer>
       <p>Built by <a href="https://archpanda.xyz">Scott</a> · <a href="https://github.com/scottyad/obsidian-citation-capture">GitHub</a></p>
       <p>© 2026 Obsidian Citation Capture</p>
     </footer>
   </div>
+  <script>
+    // Stripe Checkout Integration
+    const API_BASE = 'https://your-backend-url.onrender.com'; // UPDATE THIS
+
+    async function startCheckout(tier) {
+      try {
+        const response = await fetch(`${API_BASE}/api/v1/stripe/create-checkout-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tier: tier,
+            success_url: window.location.origin + '/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: window.location.origin
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to create checkout session');
+        }
+
+        const data = await response.json();
+        window.location.href = data.url;
+      } catch (err) {
+        alert('Checkout error: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    // Check for returning from checkout
+    async function checkSessionStatus() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (sessionId) {
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/stripe/session-status?session_id=${sessionId}`);
+          const data = await response.json();
+          
+          if (data.status === 'complete' && data.license_key) {
+            document.getElementById('license-key').textContent = data.license_key;
+            document.getElementById('license-display').style.display = 'block';
+            document.getElementById('success-message').textContent = 'Your license key is ready!';
+          }
+          
+          document.getElementById('success-modal').style.display = 'flex';
+        } catch (err) {
+          console.error('Failed to check session:', err);
+        }
+      }
+    }
+
+    function copyLicense() {
+      const key = document.getElementById('license-key').textContent;
+      navigator.clipboard.writeText(key).then(() => {
+        alert('License key copied!');
+      });
+    }
+
+    function closeModal() {
+      document.getElementById('success-modal').style.display = 'none';
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Check session on page load
+    checkSessionStatus();
+  </script>
 </body>
 </html>

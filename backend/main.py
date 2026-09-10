@@ -1,20 +1,47 @@
 """
 Obsidian Citation Capture — Cloud AI Backend Proxy
-FastAPI proxy providing Claude 3 Haiku summaries and research tag suggestions
-to Pro+ subscribers without requiring end-users to provide their own API keys.
+FastAPI proxy providing Claude 3 Haiku summaries, research tag suggestions,
+Stripe checkout sessions, and license key delivery.
 """
 
 import os
 import re
+import json
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+# Stripe imports
+try:
+    import stripe
+    STRIPE_AVAILABLE = True
+except ImportError:
+    STRIPE_AVAILABLE = False
+    stripe = None
+
+# Import webhook handler
+from stripe_handler import (
+    handle_checkout_completed,
+    verify_stripe_signature,
+    get_next_available_key,
+    load_inventory
+)
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+# Price IDs from Stripe Dashboard (set these env vars)
+STRIPE_PRICE_IDS = {
+    "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),
+    "pro": os.getenv("STRIPE_PRICE_PRO", ""),
+    "proplus": os.getenv("STRIPE_PRICE_PROPLUS", "")
+}
+
 app = FastAPI(
   title="Obsidian Citation Capture AI Proxy",
-  version="1.0.0",
-  description="Zero-configuration AI backend proxy for Pro+ subscribers"
+  version="1.1.0",
+  description="Cloud AI proxy + Stripe checkout + License key delivery"
 )
 
 app.add_middleware(
@@ -62,6 +89,15 @@ class VerifyLicenseResponse(BaseModel):
   valid: bool
   tier: str
   credits_remaining: int
+
+class CreateCheckoutRequest(BaseModel):
+  tier: str = Field(..., description="Tier to purchase: lifetime, pro, or proplus")
+  success_url: str = Field(default="https://cite.archpanda.xyz/success")
+  cancel_url: str = Field(default="https://cite.archpanda.xyz")
+
+class CreateCheckoutResponse(BaseModel):
+  session_id: str
+  url: str
 
 def verify_and_get_user(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
   if not authorization:
@@ -165,3 +201,112 @@ async def suggest_tags(
     tags=tags,
     credits_remaining=user["credits"]
   )
+
+# ─── Stripe Checkout Endpoints ───────────────────────────────────────────────
+
+@app.post("/api/v1/stripe/create-checkout-session", response_model=CreateCheckoutResponse)
+async def create_checkout_session(req: CreateCheckoutRequest):
+    """Create a Stripe Checkout session for license key purchase."""
+    if not STRIPE_AVAILABLE or not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+    
+    tier = req.tier.lower()
+    price_id = STRIPE_PRICE_IDS.get(tier)
+    
+    if not price_id:
+        raise HTTPException(status_code=400, detail=f"Invalid tier or price not configured: {tier}")
+    
+    # Check key availability before creating session
+    available_key = get_next_available_key(tier)
+    if not available_key:
+        raise HTTPException(status_code=503, detail=f"No license keys available for tier: {tier}")
+    
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price": price_id,
+                "quantity": 1,
+            }],
+            mode="payment" if tier != "proplus" else "subscription",
+            success_url=req.success_url + "?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=req.cancel_url,
+            metadata={
+                "tier": tier,
+                "product": "obsidian-citation-capture"
+            },
+            customer_email=None,  # Let Stripe collect it
+        )
+        
+        return CreateCheckoutResponse(session_id=session.id, url=session.url)
+    
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
+
+
+@app.get("/api/v1/stripe/session-status")
+async def get_session_status(session_id: str):
+    """Check checkout session status and return license key if completed."""
+    if not STRIPE_AVAILABLE or not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+    
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        if session.payment_status == "paid":
+            # Look up the assigned key
+            from stripe_handler import load_assignments
+            assignments = load_assignments()
+            
+            for assignment in assignments.get("assignments", []):
+                if assignment.get("stripe_session_id") == session_id:
+                    return {
+                        "status": "complete",
+                        "license_key": assignment["key"],
+                        "customer_email": assignment["customer_email"]
+                    }
+            
+            # Key assigned but not found in assignments (edge case)
+            return {"status": "complete", "message": "Payment successful. Check your email for the license key."}
+        
+        return {"status": session.status, "payment_status": session.payment_status}
+    
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
+
+
+@app.post("/api/v1/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Receive Stripe webhook events (checkout.session.completed)."""
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Webhook secret not configured")
+    
+    # Verify signature
+    event = verify_stripe_signature(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    
+    if not event:
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+    
+    # Handle the event
+    if event["type"] == "checkout.session.completed":
+        result = handle_checkout_completed(event)
+        return result
+    
+    return {"status": "ignored", "type": event["type"]}
+
+
+@app.get("/api/v1/inventory/status")
+async def inventory_status():
+    """Check license key inventory levels (admin endpoint)."""
+    inventory = load_inventory()
+    
+    status = {}
+    for tier in ["pro", "lifetime", "proplus"]:
+        total = sum(1 for k in inventory.get("keys", []) if k.get("tier") == tier)
+        available = sum(1 for k in inventory.get("keys", []) if k.get("tier") == tier and not k.get("used", False))
+        status[tier] = {"total": total, "available": available}
+    
+    return status
