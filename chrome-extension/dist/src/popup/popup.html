@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capture to Obsidian</title>
+  <script type="module" crossorigin src="/assets/popup-BVcAazJv.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/popup-DALXT3Sp.css">
+</head>
+<body>
+  <div class="header">
+    <div class="logo-title">
+      <div class="logo-gem"></div>
+      <h1>Citation Capture</h1>
+    </div>
+    <div id="tier-badge" class="badge badge-free">Free</div>
+  </div>
+
+  <div id="status-bar" class="status-bar">
+    <span class="spinner" id="spinner"></span>
+    <span id="status-text">Scanning active page...</span>
+  </div>
+
+  <div id="quota-warning" class="quota-warning hidden">
+    Monthly free limit reached (10/10).
+    <a href="#" id="upgrade-link">Upgrade to Pro</a> for unlimited captures.
+  </div>
+
+  <form id="capture-form">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="Paper or article title" required>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-2">
+        <label for="authors">Authors</label>
+        <input type="text" id="authors" placeholder="First Author, Second Author">
+      </div>
+      <div class="form-group flex-1">
+        <label for="year">Year</label>
+        <input type="text" id="year" placeholder="2024">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-2">
+        <label for="citekey">Citekey</label>
+        <input type="text" id="citekey" placeholder="smith2024paper" required>
+      </div>
+      <div class="form-group flex-2">
+        <label for="doi">DOI / arXiv</label>
+        <input type="text" id="doi" placeholder="10.xxxx/... or 2401.xxxxx">
+      </div>
+    </div>
+
+    <div class="form-group" id="selection-group" style="display: none;">
+      <label for="selection">Captured Highlight</label>
+      <textarea id="selection" rows="2" placeholder="Selected quote from page"></textarea>
+    </div>
+
+    <div class="form-group ai-summary-group" id="ai-group">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label for="ai-summary" style="margin-bottom: 0; display: flex; align-items: center; gap: 5px; color: #c4b5fd;">
+          <span>✨ AI Executive Summary</span>
+        </label>
+        <span id="ai-status-badge" class="badge" style="background: rgba(124, 58, 237, 0.2); border: 1px solid #7c3aed; color: #c4b5fd; font-size: 9px; padding: 1px 6px;">AI Active</span>
+      </div>
+      <textarea id="ai-summary" rows="3" placeholder="AI summary will appear here once generated..."></textarea>
+      <div style="margin-top: 6px;">
+        <label for="ai-tags" style="margin-bottom: 2px;">Research Tags</label>
+        <input type="text" id="ai-tags" placeholder="e.g. transformers, deep-learning, attention">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label for="citation-format">Copy Format</label>
+        <select id="citation-format">
+          <option value="bibtex">BibTeX</option>
+          <option value="apa">APA (7th)</option>
+          <option value="mla">MLA (9th)</option>
+          <option value="ieee">IEEE</option>
+          <option value="chicago">Chicago</option>
+          <option value="markdown">Markdown</option>
+        </select>
+      </div>
+      <div class="form-group flex-1">
+        <label for="bridge-mode">Dispatch Via</label>
+        <select id="bridge-mode">
+          <option value="obsidian-uri">Obsidian URI (Zero-dep)</option>
+          <option value="plugin-protocol">Companion Plugin</option>
+          <option value="local-rest">Local REST API</option>
+          <option value="clipboard">Clipboard Only</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px;">
+      <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: #9ca3af;" title="When checked, overwrites existing note in Obsidian instead of creating a numbered duplicate (@key 1.md)">
+        <input type="checkbox" id="overwrite-toggle" style="width: auto; margin: 0;">
+        <span>Overwrite note if exists</span>
+      </label>
+      <button type="button" id="btn-regenerate-ai" style="background: none; border: none; font-size: 11px; color: #a78bfa; cursor: pointer; padding: 0;" title="Re-run AI summarization with local Ollama">
+        ✨ Re-summarize
+      </button>
+    </div>
+
+    <div class="button-group">
+      <button type="submit" id="btn-capture" class="btn btn-primary">
+        Capture to Obsidian
+      </button>
+      <button type="button" id="btn-copy" class="btn btn-secondary" title="Copy formatted citation to clipboard">
+        Copy Citation
+      </button>
+    </div>
+
+    <div id="ai-loading-hint" class="hidden" style="text-align: center; margin-top: 5px; font-size: 10px; color: #9ca3af;">
+      <span>AI model thinking... </span>
+      <a id="btn-skip-ai" href="#" style="color: #c4b5fd; text-decoration: underline;">Capture now without AI</a>
+    </div>
+
+    <div id="direct-open-container" class="hidden" style="margin-top: 10px;">
+      <a id="btn-direct-open" href="#" class="btn btn-secondary" style="display: block; text-align: center; text-decoration: none; padding: 7px 10px; background: rgba(124, 58, 237, 0.15); border: 1px solid #7c3aed; color: #c4b5fd;">
+        Open Note in Obsidian ↗
+      </a>
+    </div>
+  </form>
+
+  <div class="footer">
+    <span id="quota-counter" class="quota-text">Usage: ...</span>
+    <a href="#" id="open-options">Settings & Templates</a>
+  </div>
+
+</body>
+</html>

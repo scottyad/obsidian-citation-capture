@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-citation-capture",
+  "name": "Obsidian Citation Capture",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Companion plugin for Obsidian Citation Capture Chrome Extension. Handles direct browser-to-vault protocol sync, literature note creation, and duplicate detection.",
+  "author": "Obsidian Citation Capture Team",
+  "authorUrl": "https://github.com/obsidian-citation/obsidian-citation-capture",
+  "isDesktopOnly": false
+}

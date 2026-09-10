@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Obsidian Citation Capture",
+  "version": "1.0.0",
+  "description": "Capture academic citations with AI metadata extraction directly into Obsidian.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "clipboardWrite",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://doi.org/*",
+    "https://api.crossref.org/*",
+    "https://export.arxiv.org/*",
+    "https://api.openalex.org/*",
+    "https://eutils.ncbi.nlm.nih.gov/*",
+    "http://localhost:11434/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Capture Paper to Obsidian",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  }
+}

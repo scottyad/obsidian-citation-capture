@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Citation Capture — Settings</title>
+  <script type="module" crossorigin src="/assets/options-faTXICmw.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/options-DmYh1FMn.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-gem"></div>
+        <h1>Obsidian Citation Capture</h1>
+      </div>
+      <p class="subtitle">Zero-configuration academic capture with local-first AI and native Obsidian sync.</p>
+    </header>
+
+    <div id="save-status" class="toast hidden">Settings saved successfully!</div>
+
+    <!-- Vault Settings -->
+    <div class="card">
+      <h2>Obsidian Vault Bridge</h2>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="vault-name">Vault Name (Optional)</label>
+          <input type="text" id="vault-name" placeholder="Leave empty for open vault">
+          <span class="help-text">Leave blank to automatically target your currently active Obsidian vault.</span>
+        </div>
+        <div class="form-group flex-1">
+          <label for="folder-path">Literature Folder</label>
+          <input type="text" id="folder-path" placeholder="Literature">
+          <span class="help-text">Subfolder in vault where notes will be saved.</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="bridge-mode">Primary Bridge Method</label>
+        <select id="bridge-mode">
+          <option value="obsidian-uri">Obsidian URI (Default, zero dependencies)</option>
+          <option value="plugin-protocol">Obsidian Companion Plugin (Enhanced)</option>
+          <option value="local-rest">Obsidian Local REST API (Silent background sync)</option>
+          <option value="clipboard">Clipboard Only (Manual paste)</option>
+        </select>
+      </div>
+
+      <div class="checkbox-group" style="margin-top: 10px;">
+        <input type="checkbox" id="overwrite-existing">
+        <label for="overwrite-existing">Overwrite existing notes if citekey matches</label>
+        <span class="help-text" style="display: block; margin-top: 2px;">
+          Unchecked (default): creates a safe numbered copy (e.g. <code>@key 1.md</code>) to prevent data loss. Check to update in place.
+        </span>
+      </div>
+
+      <div id="rest-settings" class="nested-group hidden">
+        <h3>Local REST API Configuration</h3>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="rest-port">API Port</label>
+            <input type="number" id="rest-port" value="27124">
+          </div>
+          <div class="form-group flex-2">
+            <label for="rest-token">Authorization Token (Bearer)</label>
+            <input type="password" id="rest-token" placeholder="Paste token from Obsidian plugin">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Settings (Zero Configuration / Multi-Tier) -->
+    <div class="card">
+      <div class="card-title-row">
+        <h2>AI Enhancement</h2>
+        <span class="badge badge-zero-config">Zero User Keys</span>
+      </div>
+      <p class="help-text" style="margin-bottom: 12px;">
+        Automatic executive summaries and tag generation. No API keys required.
+      </p>
+
+      <div class="form-group">
+        <label for="ai-mode">AI Mode</label>
+        <select id="ai-mode">
+          <option value="auto">Auto-Detect (Zero-config: Ollama if running, Cloud if Pro+)</option>
+          <option value="cloud">Cloud AI via CitationCapture (Claude Haiku — Pro+ tier)</option>
+          <option value="ollama">Local Ollama (100% private, runs on your machine)</option>
+          <option value="byok">Bring Your Own Key (BYOK — Power users)</option>
+          <option value="none">Disable AI Summaries</option>
+        </select>
+      </div>
+
+      <!-- Cloud AI settings -->
+      <div id="cloud-ai-settings" class="nested-group hidden">
+        <h3>Cloud AI (CitationCapture Managed Proxy)</h3>
+        <p class="help-text">High-speed Claude Haiku summaries. Authenticated via your Pro+ subscription license token.</p>
+        <div class="form-group">
+          <label for="cloud-backend-url">Cloud Proxy Endpoint</label>
+          <input type="text" id="cloud-backend-url" placeholder="https://api.citationcapture.com">
+        </div>
+        <div id="cloud-credits-indicator" class="credit-pill">Checking credits...</div>
+      </div>
+
+      <!-- Ollama settings -->
+      <div id="ollama-settings" class="nested-group hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="margin: 0;">Local Ollama Configuration</h3>
+          <button type="button" id="btn-detect-ollama" class="btn btn-secondary" style="font-size: 11px; padding: 3px 8px;">
+            Detect Models 🔄
+          </button>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="ollama-url">Ollama Endpoint</label>
+            <input type="text" id="ollama-url" placeholder="http://localhost:11434">
+          </div>
+          <div class="form-group flex-2">
+            <label for="ollama-model-select">Installed Models</label>
+            <select id="ollama-model-select">
+              <option value="">Detecting local models...</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: 4px;">
+          <label for="ollama-model">Active Model Name</label>
+          <input type="text" id="ollama-model" placeholder="llama3.2:1b">
+          <span id="ollama-detect-status" class="help-text">Click "Detect Models" to refresh list from your local Ollama instance.</span>
+        </div>
+      </div>
+
+      <!-- BYOK settings -->
+      <div id="byok-settings" class="nested-group hidden">
+        <h3>Bring Your Own API Key (Client-side Direct)</h3>
+        <p class="help-text">Keys are stored exclusively in your browser and never touch our servers.</p>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="byok-provider">Provider</label>
+            <select id="byok-provider">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI (GPT-4o-mini)</option>
+              <option value="gemini">Google (Gemini 2.0 Flash)</option>
+            </select>
+          </div>
+          <div class="form-group flex-2">
+            <label for="byok-api-key">API Key</label>
+            <input type="password" id="byok-api-key" placeholder="sk-ant-... or sk-...">
+          </div>
+        </div>
+      </div>
+
+      <div class="checkbox-group" style="margin-top: 14px;">
+        <input type="checkbox" id="auto-enrich" checked>
+        <label for="auto-enrich">Auto-enrich papers with CrossRef, BibTeX content negotiation, and AI</label>
+      </div>
+    </div>
+
+    <!-- Template Settings -->
+    <div class="card">
+      <h2>Markdown Template</h2>
+      <div class="form-group">
+        <label for="template">Literature Note Template</label>
+        <textarea id="template" rows="10"></textarea>
+        <span class="help-text">Variables: {{citekey}}, {{title}}, {{authors}}, {{authors_quoted}}, {{year}}, {{doi}}, {{journal}}, {{url}}, {{abstract}}, {{bibtex}}, {{selectedText}}, {{aiSummary}}</span>
+      </div>
+      <button type="button" id="btn-reset-template" class="btn btn-secondary">Reset to Default Template</button>
+    </div>
+
+    <!-- License and Pricing Cards -->
+    <div class="card card-pro">
+      <div class="pro-header">
+        <h2>License & Subscriptions</h2>
+        <span id="license-tier-display" class="badge">FREE TIER</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0 14px 0;">
+        <p id="license-usage-text" style="margin: 0;">Monthly Usage: 0 / 10 captures</p>
+        <button type="button" id="btn-reset-usage" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;">Reset Counter (Dev)</button>
+      </div>
+
+      <div class="pricing-matrix">
+        <div class="tier-card">
+          <h4>Free</h4>
+          <div class="price">$0</div>
+          <ul>
+            <li>10 captures / mo</li>
+            <li>Zero config</li>
+            <li>Clipboard + URI</li>
+          </ul>
+        </div>
+        <div class="tier-card">
+          <h4>Pro</h4>
+          <div class="price">$4.99 <span>/mo</span></div>
+          <ul>
+            <li>Unlimited captures</li>
+            <li>Local Ollama AI</li>
+            <li>Full export formats</li>
+          </ul>
+        </div>
+        <div class="tier-card active">
+          <h4>Pro+ (Cloud AI)</h4>
+          <div class="price">$9.99 <span>/mo</span></div>
+          <ul>
+            <li>Unlimited captures</li>
+            <li>Premium Claude AI</li>
+            <li>200 cloud summaries</li>
+          </ul>
+        </div>
+        <div class="tier-card">
+          <h4>Lifetime</h4>
+          <div class="price">$24.99 <span>one-time</span></div>
+          <ul>
+            <li>Pro forever</li>
+            <li>All future updates</li>
+            <li>BYOK AI enabled</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top: 15px;">
+        <div class="form-group flex-3">
+          <label for="license-key">Activate License</label>
+          <input type="text" id="license-key" placeholder="PRO-XXXX, PROPLUS-XXXX, or LIFETIME-XXXX">
+        </div>
+        <div class="form-group flex-1" style="align-self: flex-end;">
+          <button type="button" id="btn-activate-license" class="btn btn-primary" style="width: 100%;">Activate</button>
+        </div>
+      </div>
+      <div id="license-message" class="help-text"></div>
+    </div>
+
+    <div class="actions">
+      <button type="button" id="btn-save" class="btn btn-primary btn-large">Save Settings</button>
+    </div>
+  </div>
+
+</body>
+</html>

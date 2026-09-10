@@ -1,0 +1,14 @@
+/* Obsidian Citation Capture Plugin Styles */
+.citation-capture-ribbon {
+  color: var(--text-accent);
+}
+
+.citation-modal-preview {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 10px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
