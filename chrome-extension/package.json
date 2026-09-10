@@ -1,0 +1,19 @@
+{
+  "name": "citation-capture-chrome-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome Extension for capturing academic citations to Obsidian",
+  "scripts": {
+    "generate-icons": "node scripts/generate-icons.mjs",
+    "prebuild": "npm run generate-icons",
+    "build": "tsc && vite build"
+  },
+  "dependencies": {
+    "@obsidian-citation/shared": "*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.6"
+  }
+}

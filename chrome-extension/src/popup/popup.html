@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capture to Obsidian</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="logo-title">
+      <div class="logo-gem"></div>
+      <h1>Citation Capture</h1>
+    </div>
+    <div id="tier-badge" class="badge badge-free">Free</div>
+  </div>
+
+  <div id="status-bar" class="status-bar">
+    <span class="spinner" id="spinner"></span>
+    <span id="status-text">Scanning active page...</span>
+  </div>
+
+  <div id="quota-warning" class="quota-warning hidden">
+    Monthly free limit reached (10/10).
+    <a href="#" id="upgrade-link">Upgrade to Pro</a> for unlimited captures.
+  </div>
+
+  <form id="capture-form">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="Paper or article title" required>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-2">
+        <label for="authors">Authors</label>
+        <input type="text" id="authors" placeholder="First Author, Second Author">
+      </div>
+      <div class="form-group flex-1">
+        <label for="year">Year</label>
+        <input type="text" id="year" placeholder="2024">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-2">
+        <label for="citekey">Citekey</label>
+        <input type="text" id="citekey" placeholder="smith2024paper" required>
+      </div>
+      <div class="form-group flex-2">
+        <label for="doi">DOI / arXiv</label>
+        <input type="text" id="doi" placeholder="10.xxxx/... or 2401.xxxxx">
+      </div>
+    </div>
+
+    <div class="form-group" id="selection-group" style="display: none;">
+      <label for="selection">Captured Highlight</label>
+      <textarea id="selection" rows="2" placeholder="Selected quote from page"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label for="citation-format">Copy Format</label>
+        <select id="citation-format">
+          <option value="bibtex">BibTeX</option>
+          <option value="apa">APA (7th)</option>
+          <option value="mla">MLA (9th)</option>
+          <option value="ieee">IEEE</option>
+          <option value="chicago">Chicago</option>
+          <option value="markdown">Markdown</option>
+        </select>
+      </div>
+      <div class="form-group flex-1">
+        <label for="bridge-mode">Dispatch Via</label>
+        <select id="bridge-mode">
+          <option value="obsidian-uri">Obsidian URI (Zero-dep)</option>
+          <option value="plugin-protocol">Companion Plugin</option>
+          <option value="local-rest">Local REST API</option>
+          <option value="clipboard">Clipboard Only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button type="submit" id="btn-capture" class="btn btn-primary">
+        Capture to Obsidian
+      </button>
+      <button type="button" id="btn-copy" class="btn btn-secondary" title="Copy formatted citation to clipboard">
+        Copy Citation
+      </button>
+    </div>
+  </form>
+
+  <div class="footer">
+    <span id="quota-counter" class="quota-text">Usage: ...</span>
+    <a href="#" id="open-options">Settings & Templates</a>
+  </div>
+
+  <script type="module" src="popup.ts"></script>
+</body>
+</html>

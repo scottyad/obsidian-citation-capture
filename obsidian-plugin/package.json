@@ -1,0 +1,19 @@
+{
+  "name": "obsidian-citation-capture-plugin",
+  "version": "1.0.0",
+  "description": "Companion Obsidian plugin for Obsidian Citation Capture Chrome Extension",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "dependencies": {
+    "@obsidian-citation/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "esbuild": "^0.20.1",
+    "obsidian": "latest",
+    "typescript": "^5.4.2"
+  }
+}
