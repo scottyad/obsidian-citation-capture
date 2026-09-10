@@ -97,7 +97,7 @@ async def health_check():
   return {
     "service": "Obsidian Citation Capture AI Proxy",
     "status": "online",
-    "cloud_ai_provider": "anthropic/claude-3-haiku-20240307" if anthropic_client else "mock-mode"
+    "cloud_ai_provider": "anthropic/claude-3-5-haiku-20241022" if anthropic_client else "mock-mode"
   }
 
 @app.get("/api/v1/license/verify", response_model=VerifyLicenseResponse)
@@ -126,7 +126,7 @@ async def summarize(
   if anthropic_client:
     try:
       response = anthropic_client.messages.create(
-        model="claude-3-haiku-20240307",
+        model="claude-3-5-haiku-20241022",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}]
       )
