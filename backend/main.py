@@ -36,7 +36,10 @@ anthropic_client = None
 if os.getenv("ANTHROPIC_API_KEY"):
   try:
     from anthropic import Anthropic
-    anthropic_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    anthropic_client = Anthropic(
+  api_key=os.environ["ANTHROPIC_API_KEY"],
+  default_headers={"anthropic-workspace-id": os.environ.get("ANTHROPIC_WORKSPACE_ID", "")}
+)
   except Exception as e:
     print(f"Warning: Failed to initialize Anthropic client: {e}")
 
@@ -69,7 +72,7 @@ def verify_and_get_user(authorization: Optional[str] = Header(None)) -> Dict[str
   # Check if in simulated DB
   if license_key in LICENSE_DB:
     user = LICENSE_DB[license_key]
-    if user["tier"] != "pro_plus":
+    if user["tier"] not in ["pro_plus", "lifetime"]:
       raise HTTPException(status_code=403, detail="License is not eligible for Cloud AI. Upgrade to Pro+.")
     if user["credits"] <= 0:
       raise HTTPException(status_code=402, detail="No Cloud AI credits remaining this month.")
@@ -78,6 +81,12 @@ def verify_and_get_user(authorization: Optional[str] = Header(None)) -> Dict[str
   # Dynamic validation for keys matching standard format PROPLUS-XXXX-XXXX-XXXX
   if re.match(r"^PROPLUS-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$", license_key):
     user = {"tier": "pro_plus", "credits": 200, "status": "active"}
+    LICENSE_DB[license_key] = user
+    return user
+
+  # Lifetime keys also get Pro+ cloud access
+  if re.match(r"^LIFETIME-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$", license_key):
+    user = {"tier": "lifetime", "credits": 9999, "status": "active"}
     LICENSE_DB[license_key] = user
     return user
 
