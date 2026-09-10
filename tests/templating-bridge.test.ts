@@ -38,11 +38,27 @@ describe('ObsidianBridge', () => {
     expect(md).toContain('title: "Attention Is All You Need"');
     expect(md).toContain('authors: ["Ashish Vaswani", "Noam Shazeer"]');
     expect(md).toContain('doi: "10.48550/arXiv.1706.03762"');
+    expect(md).toContain('  - literature-note\n  - academic');
     expect(md).toContain('## AI Executive Summary');
     expect(md).toContain('> • Introduces transformer architecture');
     expect(md).toContain('## Highlights & Notes');
     expect(md).toContain('> Attention mechanisms have become an integral part');
     expect(md).toContain('```bibtex\n@article{vaswani2017attention');
+  });
+
+  it('interpolates AI tags into frontmatter', () => {
+    const dataWithTags: CitationData = {
+      ...sampleData,
+      tags: ['transformers', 'deep-learning']
+    };
+
+    const md = ObsidianBridge.renderMarkdown(dataWithTags, DEFAULT_TEMPLATE);
+    expect(md).toContain('  - literature-note\n  - academic\n  - transformers\n  - deep-learning');
+  });
+
+  it('builds valid obsidian://open URI to navigate directly to captured note', () => {
+    const openUri = ObsidianBridge.buildOpenUri(sampleData, sampleSettings);
+    expect(openUri).toBe('obsidian://open?vault=ResearchVault&file=Literature%2FAI%2F%40vaswani2017attention');
   });
 
   it('omits conditional blocks when fields are absent', () => {
@@ -68,6 +84,24 @@ describe('ObsidianBridge', () => {
     expect(params.get('vault')).toBe('ResearchVault');
     expect(params.get('file')).toBe('Literature/AI/@vaswani2017attention');
     expect(params.get('content')).toContain('# Attention Is All You Need');
+  });
+
+  it('omits vault parameter when vaultName is empty to target active vault', () => {
+    const uri = ObsidianBridge.buildObsidianUri(sampleData, { ...sampleSettings, vaultName: '' });
+
+    expect(uri.startsWith('obsidian://new?')).toBe(true);
+    const params = new URLSearchParams(uri.replace('obsidian://new?', ''));
+    expect(params.get('vault')).toBeNull();
+    expect(params.get('file')).toBe('Literature/AI/@vaswani2017attention');
+    expect(params.get('overwrite')).toBeNull(); // Default: safe duplicate (@key 1.md)
+  });
+
+  it('adds overwrite=true when overwriteExisting is enabled', () => {
+    const uri = ObsidianBridge.buildObsidianUri(sampleData, { ...sampleSettings, overwriteExisting: true });
+
+    expect(uri.startsWith('obsidian://new?')).toBe(true);
+    const params = new URLSearchParams(uri.replace('obsidian://new?', ''));
+    expect(params.get('overwrite')).toBe('true');
   });
 
   it('builds valid obsidian://citation companion plugin URI', () => {

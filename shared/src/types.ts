@@ -47,6 +47,7 @@ export interface ExtensionSettings {
   byokApiKey?: string;
   byokModel?: string;
   autoEnrich: boolean;
+  overwriteExisting?: boolean;
   licenseKey?: string;
 }
 

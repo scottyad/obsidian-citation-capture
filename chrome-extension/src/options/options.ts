@@ -5,6 +5,7 @@ import { DEFAULT_TEMPLATE } from '../lib/obsidian-bridge';
 const vaultNameInput = document.getElementById('vault-name') as HTMLInputElement;
 const folderPathInput = document.getElementById('folder-path') as HTMLInputElement;
 const bridgeModeSelect = document.getElementById('bridge-mode') as HTMLSelectElement;
+const overwriteExistingCheckbox = document.getElementById('overwrite-existing') as HTMLInputElement;
 const restSettings = document.getElementById('rest-settings') as HTMLElement;
 const restPortInput = document.getElementById('rest-port') as HTMLInputElement;
 const restTokenInput = document.getElementById('rest-token') as HTMLInputElement;
@@ -19,6 +20,9 @@ const cloudCreditsIndicator = document.getElementById('cloud-credits-indicator')
 const ollamaSettings = document.getElementById('ollama-settings') as HTMLElement;
 const ollamaUrlInput = document.getElementById('ollama-url') as HTMLInputElement;
 const ollamaModelInput = document.getElementById('ollama-model') as HTMLInputElement;
+const ollamaModelSelect = document.getElementById('ollama-model-select') as HTMLSelectElement;
+const btnDetectOllama = document.getElementById('btn-detect-ollama') as HTMLButtonElement;
+const ollamaDetectStatus = document.getElementById('ollama-detect-status') as HTMLElement;
 const byokSettings = document.getElementById('byok-settings') as HTMLElement;
 const byokProviderSelect = document.getElementById('byok-provider') as HTMLSelectElement;
 const byokApiKeyInput = document.getElementById('byok-api-key') as HTMLInputElement;
@@ -78,7 +82,7 @@ async function loadSettings() {
 
   if (settingsRes?.success && settingsRes.settings) {
     const s: ExtensionSettings = settingsRes.settings;
-    vaultNameInput.value = s.vaultName || 'ResearchVault';
+    vaultNameInput.value = (s.vaultName === 'ResearchVault' ? '' : s.vaultName) || '';
     folderPathInput.value = s.folderPath || 'Literature';
     bridgeModeSelect.value = s.bridgeMode || 'obsidian-uri';
     restPortInput.value = String(s.localRestPort || 27124);
@@ -92,7 +96,9 @@ async function loadSettings() {
     byokProviderSelect.value = s.byokProvider || 'anthropic';
     byokApiKeyInput.value = s.byokApiKey || '';
     autoEnrichCheckbox.checked = s.autoEnrich !== false;
+    overwriteExistingCheckbox.checked = s.overwriteExisting === true;
 
+    detectOllamaModels(s.ollamaModel);
     updateBridgeUI();
     updateAIUI();
   }
@@ -102,9 +108,54 @@ async function loadSettings() {
   }
 }
 
+async function detectOllamaModels(preferredModel?: string) {
+  if (!ollamaModelSelect || !ollamaDetectStatus) return;
+  ollamaDetectStatus.textContent = 'Detecting installed models from Ollama...';
+  ollamaDetectStatus.style.color = '#9ca3af';
+
+  try {
+    const endpoint = ollamaUrlInput.value.trim() || 'http://localhost:11434';
+    const res = await chrome.runtime.sendMessage({
+      type: 'GET_OLLAMA_MODELS',
+      payload: { endpoint }
+    });
+
+    if (res?.success && Array.isArray(res.models) && res.models.length > 0) {
+      ollamaModelSelect.innerHTML = '';
+      const models: string[] = res.models;
+      for (const m of models) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        ollamaModelSelect.appendChild(opt);
+      }
+
+      const active = preferredModel || ollamaModelInput.value.trim();
+      if (active && models.includes(active)) {
+        ollamaModelSelect.value = active;
+        ollamaModelInput.value = active;
+      } else {
+        const match = models.find(m => m.includes('llama3.2') || m.includes('phi') || m.includes('gemma') || m.includes('qwen')) || models[0];
+        ollamaModelSelect.value = match;
+        ollamaModelInput.value = match;
+      }
+
+      ollamaDetectStatus.textContent = `✓ Found ${models.length} local model(s). Selected: ${ollamaModelInput.value}`;
+      ollamaDetectStatus.style.color = '#10b981';
+    } else {
+      ollamaModelSelect.innerHTML = '<option value="">No models found / Ollama offline</option>';
+      ollamaDetectStatus.textContent = 'Could not detect models. Is Ollama running on localhost:11434?';
+      ollamaDetectStatus.style.color = '#f59e0b';
+    }
+  } catch {
+    ollamaDetectStatus.textContent = 'Detection failed. You can type model name manually.';
+    ollamaDetectStatus.style.color = '#ef4444';
+  }
+}
+
 async function saveSettings() {
   const settings: ExtensionSettings = {
-    vaultName: vaultNameInput.value.trim() || 'ResearchVault',
+    vaultName: vaultNameInput.value.trim(),
     folderPath: folderPathInput.value.trim() || 'Literature',
     bridgeMode: bridgeModeSelect.value as any,
     localRestPort: parseInt(restPortInput.value, 10) || 27124,
@@ -114,10 +165,11 @@ async function saveSettings() {
     aiMode: aiModeSelect.value as any,
     cloudBackendUrl: cloudBackendUrlInput.value.trim() || 'https://api.citationcapture.com',
     ollamaUrl: ollamaUrlInput.value.trim() || 'http://localhost:11434',
-    ollamaModel: ollamaModelInput.value.trim() || 'llama3.1:8b',
+    ollamaModel: ollamaModelInput.value.trim() || 'llama3.2:1b',
     byokProvider: byokProviderSelect.value as any,
     byokApiKey: byokApiKeyInput.value.trim(),
-    autoEnrich: autoEnrichCheckbox.checked
+    autoEnrich: autoEnrichCheckbox.checked,
+    overwriteExisting: overwriteExistingCheckbox.checked
   };
 
   const res = await chrome.runtime.sendMessage({
@@ -135,6 +187,17 @@ async function saveSettings() {
 
 bridgeModeSelect.addEventListener('change', updateBridgeUI);
 aiModeSelect.addEventListener('change', updateAIUI);
+
+ollamaModelSelect?.addEventListener('change', () => {
+  if (ollamaModelSelect.value) {
+    ollamaModelInput.value = ollamaModelSelect.value;
+  }
+});
+
+btnDetectOllama?.addEventListener('click', (e) => {
+  e.preventDefault();
+  detectOllamaModels();
+});
 
 btnResetTemplate.addEventListener('click', () => {
   if (confirm('Reset template to default Obsidian literature note template?')) {

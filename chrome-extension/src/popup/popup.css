@@ -227,3 +227,22 @@ textarea {
 .footer a:hover {
   text-decoration: underline;
 }
+
+.ai-summary-group {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.ai-summary-group textarea {
+  font-size: 11px;
+  line-height: 1.4;
+  background: rgba(20, 20, 30, 0.7);
+}
+
+.ai-summary-group input {
+  font-size: 11px;
+  background: rgba(20, 20, 30, 0.7);
+}

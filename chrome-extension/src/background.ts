@@ -7,7 +7,7 @@ import { ObsidianBridge, DEFAULT_TEMPLATE } from './lib/obsidian-bridge';
 const resolver = new MetadataResolver();
 
 const DEFAULT_SETTINGS: ExtensionSettings = {
-  vaultName: 'ResearchVault',
+  vaultName: '',
   folderPath: 'Literature',
   bridgeMode: 'obsidian-uri',
   localRestPort: 27124,
@@ -19,12 +19,17 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   ollamaModel: 'llama3.1:8b',
   cloudBackendUrl: 'https://api.citationcapture.com',
   byokProvider: 'anthropic',
-  autoEnrich: true
+  autoEnrich: true,
+  overwriteExisting: false
 };
 
 async function getStoredSettings(): Promise<ExtensionSettings> {
   const data = await chrome.storage.sync.get('settings');
-  return { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+  const settings: ExtensionSettings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+  if (settings.vaultName === 'ResearchVault') {
+    settings.vaultName = '';
+  }
+  return settings;
 }
 
 function isWebTab(tab?: chrome.tabs.Tab): boolean {
@@ -103,6 +108,19 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!stored.settings) {
     await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
   }
+
+  // Auto-inject content.js into all open web tabs so user does not need to reload them
+  try {
+    const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+    for (const tab of tabs) {
+      if (tab.id) {
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        }).catch(() => {});
+      }
+    }
+  } catch {}
 });
 
 // Handle context menus
@@ -266,6 +284,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await LicenseManager.resetFreeUsage();
           const status = await LicenseManager.getStatus();
           sendResponse({ success: true, status });
+          break;
+        }
+
+        case 'GET_OLLAMA_MODELS': {
+          const ai = new AIEnhancer();
+          const endpoint = message?.payload?.endpoint || 'http://localhost:11434';
+          const models = await ai.getOllamaModels(endpoint);
+          sendResponse({ success: true, models });
+          break;
+        }
+
+        case 'DISPATCH_OBSIDIAN_URI': {
+          const uri = message?.payload?.uri;
+          if (!uri) {
+            sendResponse({ success: false, error: 'No URI provided' });
+            break;
+          }
+
+          let handled = false;
+          const tab = await getActiveWebTab(sender?.tab, message?.payload?.tabId);
+
+          // 1. Try dispatching via content script in the active web tab
+          if (tab?.id) {
+            try {
+              const res = await chrome.tabs.sendMessage(tab.id, { type: 'DISPATCH_URI', uri });
+              if (res?.success) {
+                handled = true;
+              }
+            } catch {}
+
+            // 2. Try updating the tab URL directly
+            if (!handled) {
+              try {
+                await chrome.tabs.update(tab.id, { url: uri });
+                handled = true;
+              } catch (updateErr) {
+                console.warn('Tab update navigation failed:', updateErr);
+              }
+            }
+          }
+
+          // 3. Background tab fallback
+          if (!handled) {
+            try {
+              const newTab = await chrome.tabs.create({ url: uri, active: false });
+              if (newTab?.id) {
+                setTimeout(() => {
+                  chrome.tabs.remove(newTab.id!).catch(() => {});
+                }, 1500);
+                handled = true;
+              }
+            } catch (createErr) {
+              console.warn('Background tab creation failed:', createErr);
+            }
+          }
+
+          sendResponse({ success: true, handled });
           break;
         }
 

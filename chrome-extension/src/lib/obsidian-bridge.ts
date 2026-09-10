@@ -8,8 +8,7 @@ year: {{year}}
 {{#if_doi}}doi: "{{doi}}"{{/if_doi}}
 url: "{{url}}"
 tags:
-  - literature-note
-  - academic
+{{tags_yaml}}
 ---
 
 # {{title}}
@@ -65,6 +64,22 @@ export class ObsidianBridge {
     output = output.replace(/{{bibtex}}/g, data.bibtex || '');
     output = output.replace(/{{selectedText}}/g, (data.selectedText || '').replace(/\n/g, '\n> '));
 
+    const defaultTags = ['literature-note', 'academic'];
+    const customTags = (data.tags || []).map(t => t.trim().toLowerCase().replace(/^#/, '')).filter(Boolean);
+    const allTags = Array.from(new Set([...defaultTags, ...customTags]));
+    const tagsYaml = allTags.map(t => `  - ${t}`).join('\n');
+    const tagsInline = allTags.join(', ');
+
+    output = output.replace(/{{tags_yaml}}/g, tagsYaml);
+    output = output.replace(/{{tags}}/g, tagsInline);
+
+    // If template has older hardcoded tags block, replace it so AI tags appear in frontmatter
+    if (output.includes('tags:\n  - literature-note\n  - academic\n---')) {
+      output = output.replace('tags:\n  - literature-note\n  - academic\n---', `tags:\n${tagsYaml}\n---`);
+    } else if (output.includes('tags:\n  - literature-note\n  - academic\r\n---')) {
+      output = output.replace('tags:\n  - literature-note\n  - academic\r\n---', `tags:\n${tagsYaml}\r\n---`);
+    }
+
     // Handle conditionals
     output = output.replace(/{{#if_doi}}([\s\S]*?){{\/if_doi}}/g, data.doi ? '$1' : '');
     output = output.replace(/{{#if_selection}}([\s\S]*?){{\/if_selection}}/g, data.selectedText ? '$1' : '');
@@ -82,10 +97,14 @@ export class ObsidianBridge {
   public static buildObsidianUri(data: CitationData, settings: ExtensionSettings): string {
     const content = this.renderMarkdown(data, settings.template);
     const folder = settings.folderPath ? `${settings.folderPath.replace(/^\/+|\/+$/g, '')}/` : '';
-    // obsidian://new?vault=...&file=...&content=... (without .md extension as per Obsidian URI spec)
+    // obsidian://new?file=...&content=... (without .md extension as per Obsidian URI spec)
     const file = `${folder}@${data.citekey}`;
 
-    return `obsidian://new?vault=${encodeURIComponent(settings.vaultName || 'Vault')}&file=${encodeURIComponent(file)}&content=${encodeURIComponent(content)}`;
+    const vaultName = (settings.vaultName || '').trim();
+    const vaultParam = vaultName ? `vault=${encodeURIComponent(vaultName)}&` : '';
+    const overwriteParam = settings.overwriteExisting ? '&overwrite=true' : '';
+
+    return `obsidian://new?${vaultParam}file=${encodeURIComponent(file)}&content=${encodeURIComponent(content)}${overwriteParam}`;
   }
 
   public static buildPluginUri(data: CitationData, settings: ExtensionSettings): string {
@@ -151,7 +170,7 @@ export class ObsidianBridge {
   public static async dispatch(
     data: CitationData,
     settings: ExtensionSettings
-  ): Promise<{ success: boolean; mode: string; message: string }> {
+  ): Promise<{ success: boolean; mode: string; message: string; uri?: string }> {
     switch (settings.bridgeMode) {
       case 'local-rest': {
         const restResult = await this.sendViaLocalRest(data, settings);
@@ -161,7 +180,7 @@ export class ObsidianBridge {
       case 'plugin-protocol': {
         const uri = this.buildPluginUri(data, settings);
         this.openUri(uri);
-        return { success: true, mode: 'plugin-protocol', message: 'Sent capture to Obsidian Companion Plugin.' };
+        return { success: true, mode: 'plugin-protocol', message: 'Sent capture to Obsidian Companion Plugin.', uri };
       }
 
       case 'clipboard': {
@@ -178,19 +197,47 @@ export class ObsidianBridge {
       default: {
         const uri = this.buildObsidianUri(data, settings);
         this.openUri(uri);
-        return { success: true, mode: 'obsidian-uri', message: 'Created note via obsidian://new handler.' };
+        return { success: true, mode: 'obsidian-uri', message: 'Created note via obsidian://new handler.', uri };
       }
     }
   }
 
-  private static openUri(uri: string): void {
+  public static buildOpenUri(data: CitationData, settings: ExtensionSettings): string {
+    const folder = settings.folderPath ? `${settings.folderPath.replace(/^\/+|\/+$/g, '')}/` : '';
+    const file = `${folder}@${data.citekey}`;
+    const vaultName = (settings.vaultName || '').trim();
+    const vaultParam = vaultName ? `vault=${encodeURIComponent(vaultName)}&` : '';
+    return `obsidian://open?${vaultParam}file=${encodeURIComponent(file)}`;
+  }
+
+  public static openUri(uri: string): void {
     if (typeof window !== 'undefined' && window.document) {
-      const a = document.createElement('a');
-      a.href = uri;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => document.body.removeChild(a), 500);
+      let anchorClicked = false;
+      try {
+        const a = document.createElement('a');
+        a.href = uri;
+        a.target = '_self';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        anchorClicked = true;
+        setTimeout(() => {
+          if (a.parentNode) {
+            a.parentNode.removeChild(a);
+          }
+        }, 1000);
+      } catch (err) {
+        console.warn('Anchor click error:', err);
+      }
+
+      // Only fallback to window.location.href if anchor click failed
+      if (!anchorClicked) {
+        try {
+          window.location.href = uri;
+        } catch (err) {
+          console.warn('window.location.href error:', err);
+        }
+      }
     }
   }
 }

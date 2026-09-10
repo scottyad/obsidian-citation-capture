@@ -50,6 +50,19 @@ export class AIEnhancer {
     }
   }
 
+  public async getOllamaModels(endpoint: string = 'http://localhost:11434'): Promise<string[]> {
+    try {
+      const url = `${endpoint.replace(/\/+$/, '')}/api/tags`;
+      const res = await this.fetchFn(url, { method: 'GET' });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!Array.isArray(data?.models)) return [];
+      return data.models.map((m: any) => m.name || m.model).filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
   /**
    * Summarize an academic abstract into 2 high-impact bullet points
    */
@@ -155,9 +168,23 @@ export class AIEnhancer {
   }
 
   // --- 2. Local Ollama (Pro - Keyless, Private) ---
+  private async resolveOllamaModel(endpoint: string, preferredModel?: string): Promise<string> {
+    const fallback = preferredModel || 'llama3.2:1b';
+    try {
+      const models = await this.getOllamaModels(endpoint);
+      if (models.length === 0) return fallback;
+      if (preferredModel && models.includes(preferredModel)) return preferredModel;
+      // Search for known fast lightweight models
+      const match = models.find(m => m.includes('llama3.2') || m.includes('phi') || m.includes('gemma') || m.includes('qwen') || m.includes('llama'));
+      return match || models[0];
+    } catch {
+      return fallback;
+    }
+  }
+
   private async summarizeOllama(abstract: string, settings: ExtensionSettings): Promise<string | undefined> {
     const endpoint = settings.ollamaUrl.replace(/\/+$/, '');
-    const model = settings.ollamaModel || 'llama3.1:8b';
+    const model = await this.resolveOllamaModel(endpoint, settings.ollamaModel);
     const prompt = `You are an expert academic research assistant. Summarize the following academic abstract in 2 concise, high-impact bullet points focusing on core methodology and key findings:\n\n${abstract}\n\nSummary:`;
 
     try {
@@ -178,7 +205,7 @@ export class AIEnhancer {
 
   private async suggestTagsOllama(title: string, abstract: string | undefined, settings: ExtensionSettings): Promise<string[]> {
     const endpoint = settings.ollamaUrl.replace(/\/+$/, '');
-    const model = settings.ollamaModel || 'llama3.1:8b';
+    const model = await this.resolveOllamaModel(endpoint, settings.ollamaModel);
     const prompt = `Suggest 3 to 5 lowercase hyphenated research tags (e.g., machine-learning, neuroscience) for this paper. Return ONLY a JSON array of strings.\nTitle: ${title}\nAbstract: ${abstract || ''}\nJSON:`;
 
     try {

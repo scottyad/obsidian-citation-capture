@@ -23,9 +23,9 @@
       <h2>Obsidian Vault Bridge</h2>
       <div class="form-row">
         <div class="form-group flex-1">
-          <label for="vault-name">Vault Name</label>
-          <input type="text" id="vault-name" placeholder="ResearchVault">
-          <span class="help-text">The exact name of your Obsidian vault.</span>
+          <label for="vault-name">Vault Name (Optional)</label>
+          <input type="text" id="vault-name" placeholder="Leave empty for open vault">
+          <span class="help-text">Leave blank to automatically target your currently active Obsidian vault.</span>
         </div>
         <div class="form-group flex-1">
           <label for="folder-path">Literature Folder</label>
@@ -42,6 +42,14 @@
           <option value="local-rest">Obsidian Local REST API (Silent background sync)</option>
           <option value="clipboard">Clipboard Only (Manual paste)</option>
         </select>
+      </div>
+
+      <div class="checkbox-group" style="margin-top: 10px;">
+        <input type="checkbox" id="overwrite-existing">
+        <label for="overwrite-existing">Overwrite existing notes if citekey matches</label>
+        <span class="help-text" style="display: block; margin-top: 2px;">
+          Unchecked (default): creates a safe numbered copy (e.g. <code>@key 1.md</code>) to prevent data loss. Check to update in place.
+        </span>
       </div>
 
       <div id="rest-settings" class="nested-group hidden">
@@ -93,16 +101,28 @@
 
       <!-- Ollama settings -->
       <div id="ollama-settings" class="nested-group hidden">
-        <h3>Local Ollama Configuration</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="margin: 0;">Local Ollama Configuration</h3>
+          <button type="button" id="btn-detect-ollama" class="btn btn-secondary" style="font-size: 11px; padding: 3px 8px;">
+            Detect Models 🔄
+          </button>
+        </div>
         <div class="form-row">
           <div class="form-group flex-2">
             <label for="ollama-url">Ollama Endpoint</label>
             <input type="text" id="ollama-url" placeholder="http://localhost:11434">
           </div>
-          <div class="form-group flex-1">
-            <label for="ollama-model">Model Name</label>
-            <input type="text" id="ollama-model" placeholder="llama3.1:8b">
+          <div class="form-group flex-2">
+            <label for="ollama-model-select">Installed Models</label>
+            <select id="ollama-model-select">
+              <option value="">Detecting local models...</option>
+            </select>
           </div>
+        </div>
+        <div class="form-group" style="margin-top: 4px;">
+          <label for="ollama-model">Active Model Name</label>
+          <input type="text" id="ollama-model" placeholder="llama3.2:1b">
+          <span id="ollama-detect-status" class="help-text">Click "Detect Models" to refresh list from your local Ollama instance.</span>
         </div>
       </div>
 
