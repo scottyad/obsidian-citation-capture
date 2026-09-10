@@ -1,0 +1,62 @@
+baseURL = 'https://archpanda.xyz'
+languageCode = 'en-us'
+title = 'Archpanda'
+theme = 'PaperMod'
+
+[params]
+  author = 'Scott'
+  description = 'Thermal engineering, Linux optimization, and the art of keeping things cool'
+  defaultTheme = 'dark'
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+
+[params.profileMode]
+  enabled = true
+  title = 'Archpanda'
+  subtitle = 'Thermal engineering, Linux optimization, and the art of keeping things cool'
+  imageUrl = 'https://github.com/scottyad.png'
+  imageTitle = 'Scott'
+
+[[params.profileMode.buttons]]
+  name = 'Posts'
+  url = '/posts/'
+
+[[params.profileMode.buttons]]
+  name = 'Manual & Tools'
+  url = 'https://tattvamasi2.gumroad.com/l/erddia'
+
+[[params.profileMode.buttons]]
+  name = 'Work With Me'
+  url = '/work-with-me/'
+
+[[params.profileMode.buttons]]
+  name = 'Obsidian Citation Capture'
+  url = 'https://scottyad.github.io/obsidian-citation-capture/'
+
+[params.assets]
+  favicon = '/favicon.ico'
+
+[menu]
+  [[menu.main]]
+    identifier = 'posts'
+    name = 'Posts'
+    url = '/posts/'
+    weight = 10
+  [[menu.main]]
+    identifier = 'tools'
+    name = 'Manual & Tools'
+    url = 'https://tattvamasi2.gumroad.com/l/erddia'
+    weight = 20
+  [[menu.main]]
+    identifier = 'work'
+    name = 'Work With Me'
+    url = '/work-with-me/'
+    weight = 30
+  [[menu.main]]
+    identifier = 'citation'
+    name = 'Citation Capture'
+    url = 'https://scottyad.github.io/obsidian-citation-capture/'
+    weight = 40
