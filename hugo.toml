@@ -12,13 +12,16 @@ theme = 'PaperMod'
   ShowPostNavLinks = true
   ShowBreadCrumbs = true
   ShowCodeCopyButtons = true
+  assets_disableFingerprinting = true
 
 [params.profileMode]
   enabled = true
   title = 'Archpanda'
   subtitle = 'Thermal engineering, Linux optimization, and the art of keeping things cool'
-  imageUrl = 'https://github.com/scottyad.png'
-  imageTitle = 'Scott'
+  imageUrl = '/images/mascot.png'
+  imageTitle = 'Cyberpanda Mascot'
+  imageWidth = 300
+  imageHeight = 300
 
 [[params.profileMode.buttons]]
   name = 'Posts'
@@ -37,7 +40,8 @@ theme = 'PaperMod'
   url = 'https://scottyad.github.io/obsidian-citation-capture/'
 
 [params.assets]
-  favicon = '/favicon.ico'
+  favicon = '/images/mascot.png'
+  css = ["custom.css"]
 
 [menu]
   [[menu.main]]

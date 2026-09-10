@@ -1,0 +1,51 @@
+:root {
+  --primary: #e94560;
+  --secondary: #16213e;
+  --accent: #0f3460;
+  --highlight: #ff6b6b;
+  --dark-bg: #1a1a2e;
+}
+
+body {
+  background: var(--dark-bg) !important;
+}
+
+.main {
+  background: var(--dark-bg) !important;
+}
+
+.post-content {
+  background: var(--secondary) !important;
+  border: 1px solid rgba(233, 69, 96, 0.2);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.profile img {
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(233, 69, 96, 0.4);
+}
+
+.profile-buttons a {
+  background: var(--primary) !important;
+  border: none !important;
+  transition: all 0.3s;
+}
+
+.profile-buttons a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(233, 69, 96, 0.3);
+}
+
+.nav a {
+  color: #eee !important;
+}
+
+.nav a:hover {
+  color: var(--primary) !important;
+}
+
+footer {
+  border-top: 1px solid rgba(233, 69, 96, 0.2) !important;
+}
