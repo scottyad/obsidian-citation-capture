@@ -4,6 +4,10 @@ FastAPI proxy providing Claude 3 Haiku summaries, research tag suggestions,
 Stripe checkout sessions, and license key delivery.
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import os
 import re
 import json
@@ -70,6 +74,10 @@ if os.getenv("ANTHROPIC_API_KEY"):
   except Exception as e:
     print(f"Warning: Failed to initialize Anthropic client: {e}")
 
+# Determine which model to use
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+print(f"Using Anthropic model: {ANTHROPIC_MODEL}")
+
 class SummarizeRequest(BaseModel):
   abstract: str = Field(..., min_length=20, description="Academic paper abstract")
 
@@ -133,7 +141,7 @@ async def health_check():
   return {
     "service": "Obsidian Citation Capture AI Proxy",
     "status": "online",
-    "cloud_ai_provider": "anthropic/claude-3-5-haiku-20241022" if anthropic_client else "mock-mode"
+    "cloud_ai_provider": f"anthropic/{ANTHROPIC_MODEL}" if anthropic_client else "mock-mode"
   }
 
 @app.get("/api/v1/license/verify", response_model=VerifyLicenseResponse)
@@ -162,7 +170,7 @@ async def summarize(
   if anthropic_client:
     try:
       response = anthropic_client.messages.create(
-        model="claude-3-5-haiku-20241022",
+        model=ANTHROPIC_MODEL,
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}]
       )
