@@ -4,6 +4,10 @@ FastAPI server with SQLite database, Stripe integration, Cloud AI proxy.
 Integrates with existing stripe_handler.py for email delivery.
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import os
 import re
 import json
