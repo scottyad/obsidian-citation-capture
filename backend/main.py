@@ -11,10 +11,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import os
 import re
 import json
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, Header, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, Field, EmailStr
 
 # Stripe imports
 try:
@@ -31,6 +33,10 @@ from stripe_handler import (
     get_next_available_key,
     load_inventory
 )
+
+# Admin API key
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
+security = HTTPBearer(auto_error=False)
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -106,6 +112,33 @@ class CreateCheckoutRequest(BaseModel):
 class CreateCheckoutResponse(BaseModel):
   session_id: str
   url: str
+
+class BatchGenerateRequest(BaseModel):
+  tier: str = Field(..., description="Tier: pro, proplus, lifetime, team")
+  count: int = Field(1, ge=1, le=1000)
+  customer_email: Optional[EmailStr] = None
+
+class BatchGenerateResponse(BaseModel):
+  keys: List[str]
+  tier: str
+  count: int
+
+# Admin auth helper
+async def verify_admin_auth(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not ADMIN_API_KEY or ADMIN_API_KEY == "changeme_admin_key_2024":
+        raise HTTPException(status_code=500, detail="Admin API key not configured")
+    if not credentials or credentials.credentials != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid admin API key")
+    return credentials.credentials
+
+# Normalize tier
+def normalize_tier(tier: str) -> str:
+    t = tier.lower().replace("+", "_").replace("-", "_")
+    if t in ("proplus", "pro_plus"):
+        t = "pro_plus"
+    if t not in ("free", "pro", "pro_plus", "lifetime", "team"):
+        t = "pro"
+    return t
 
 def verify_and_get_user(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
   if not authorization:
@@ -318,3 +351,96 @@ async def inventory_status():
         status[tier] = {"total": total, "available": available}
     
     return status
+
+
+# ─── Admin Routes ────────────────────────────────────────────────────────────
+
+@app.post("/admin/licenses/generate", response_model=BatchGenerateResponse)
+async def admin_generate_keys(req: BatchGenerateRequest, admin_key: str = Depends(verify_admin_auth)):
+    """Generate new license keys in batch."""
+    import secrets
+    import string
+    
+    tier = normalize_tier(req.tier)
+    keys = []
+    
+    for _ in range(req.count):
+        # Generate random key
+        parts = [''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(4)) for _ in range(3)]
+        key = f"{tier.upper().replace('_', '-')}-{'-'.join(parts)}"
+        
+        # Add to license DB
+        LICENSE_DB[key] = {
+            "tier": tier,
+            "credits": 9999 if tier == "lifetime" else (200 if tier == "pro_plus" else 0),
+            "status": "active",
+            "email": req.customer_email,
+            "created_at": datetime.now().isoformat()
+        }
+        keys.append(key)
+    
+    return BatchGenerateResponse(keys=keys, tier=tier, count=len(keys))
+
+@app.get("/admin/licenses")
+async def admin_list_licenses(
+    tier: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+    admin_key: str = Depends(verify_admin_auth)
+):
+    """List all license keys."""
+    licenses = []
+    for key, data in LICENSE_DB.items():
+        if tier and data["tier"] != normalize_tier(tier):
+            continue
+        if status and data["status"] != status:
+            continue
+        licenses.append({
+            "key": key,
+            "tier": data["tier"],
+            "status": data["status"],
+            "credits": data.get("credits", 0)
+        })
+    
+    # Apply pagination
+    total = len(licenses)
+    licenses = licenses[offset:offset + limit]
+    
+    return {
+        "licenses": licenses,
+        "total": total,
+        "page": offset // limit + 1,
+        "limit": limit
+    }
+
+@app.post("/admin/licenses/{key}/revoke")
+async def admin_revoke_license(key: str, reason: str = "Admin revocation", admin_key: str = Depends(verify_admin_auth)):
+    """Revoke a license key."""
+    if key not in LICENSE_DB:
+        raise HTTPException(status_code=404, detail="License not found")
+    
+    LICENSE_DB[key]["status"] = "revoked"
+    LICENSE_DB[key]["revoked_reason"] = reason
+    LICENSE_DB[key]["revoked_at"] = datetime.now().isoformat()
+    
+    return {"status": "revoked", "key": key.upper(), "reason": reason}
+
+@app.get("/admin/stats")
+async def admin_stats(days: int = 30, admin_key: str = Depends(verify_admin_auth)):
+    """Get usage statistics."""
+    total = len(LICENSE_DB)
+    active = sum(1 for v in LICENSE_DB.values() if v["status"] == "active")
+    revoked = sum(1 for v in LICENSE_DB.values() if v["status"] == "revoked")
+    
+    by_tier = {}
+    for data in LICENSE_DB.values():
+        t = data["tier"]
+        by_tier[t] = by_tier.get(t, 0) + 1
+    
+    return {
+        "total_licenses": total,
+        "active_licenses": active,
+        "revoked_licenses": revoked,
+        "by_tier": by_tier
+    }
