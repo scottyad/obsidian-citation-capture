@@ -144,7 +144,12 @@ def verify_and_get_user(authorization: Optional[str] = Header(None)) -> Dict[str
   if not authorization:
     raise HTTPException(status_code=401, detail="Missing Authorization header")
   
-  license_key = authorization.replace("Bearer ", "").strip().toUpperCase() if hasattr(str, 'toUpperCase') else authorization.replace("Bearer ", "").strip().upper()
+  # Parse license key from Authorization header
+  auth = authorization.strip()
+  if auth.lower().startswith("bearer "):
+      license_key = auth[7:].strip().upper()
+  else:
+      license_key = auth.upper()
   
   # Check if in simulated DB
   if license_key in LICENSE_DB:
