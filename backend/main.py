@@ -38,8 +38,12 @@ from stripe_handler import (
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
 security = HTTPBearer(auto_error=False)
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+# Only configure Stripe if import succeeded
+if STRIPE_AVAILABLE and stripe:
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+else:
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
 # Price IDs from Stripe Dashboard (set these env vars)
 STRIPE_PRICE_IDS = {
