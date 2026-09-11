@@ -16,7 +16,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, Header, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 # Stripe imports
 try:
@@ -116,7 +116,7 @@ class CreateCheckoutResponse(BaseModel):
 class BatchGenerateRequest(BaseModel):
   tier: str = Field(..., description="Tier: pro, proplus, lifetime, team")
   count: int = Field(1, ge=1, le=1000)
-  customer_email: Optional[EmailStr] = None
+  customer_email: Optional[str] = None
 
 class BatchGenerateResponse(BaseModel):
   keys: List[str]
