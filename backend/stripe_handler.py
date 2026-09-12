@@ -68,15 +68,39 @@ def save_assignments(assignments: Dict[str, Any]):
 
 
 def get_next_available_key(tier: str) -> Optional[str]:
-    """Get the next unused key for a given tier."""
+    """Get the next unused key for a given tier. If none available, generate a new one."""
     inventory = load_inventory()
     tier = tier.lower().replace("_", "").replace("+", "plus")
     
+    # First try to find an existing unused key
     for key_entry in inventory.get("keys", []):
         if key_entry.get("tier") == tier and not key_entry.get("used", False):
             return key_entry["key"]
     
-    return None
+    # No unused keys available - generate a new one
+    import secrets
+    import string
+    parts = [''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(4)) for _ in range(3)]
+    
+    if tier == "pro":
+        new_key = f"PRO-{'-'.join(parts)}"
+    elif tier == "lifetime":
+        new_key = f"LIFETIME-{'-'.join(parts)}"
+    elif tier in ("proplus", "pro_plus"):
+        new_key = f"PROPLUS-{'-'.join(parts)}"
+    else:
+        new_key = f"PRO-{'-'.join(parts)}"
+    
+    # Add to inventory
+    inventory["keys"].append({
+        "key": new_key,
+        "tier": tier,
+        "used": False,
+        "created_at": datetime.utcnow().isoformat()
+    })
+    save_inventory(inventory)
+    
+    return new_key
 
 
 def mark_key_used(key: str, customer_email: str, stripe_session_id: str):
