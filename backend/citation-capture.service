@@ -1,0 +1,15 @@
+[Unit]
+Description=Citation Capture License Server
+After=network.target
+
+[Service]
+Type=simple
+User=thedemiurge
+WorkingDirectory=/home/thedemiurge/scratch_sym/citation_capture_obsidian/backend
+EnvironmentFile=/home/thedemiurge/scratch_sym/citation_capture_obsidian/backend/.env
+ExecStart=/home/thedemiurge/scratch_sym/citation_capture_obsidian/backend/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

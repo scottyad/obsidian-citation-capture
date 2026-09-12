@@ -42,7 +42,7 @@ export interface ExtensionSettings {
   aiMode: AIProviderMode; // default 'auto'
   ollamaUrl: string; // default "http://localhost:11434"
   ollamaModel: string; // default "llama3.1:8b"
-  cloudBackendUrl: string; // default "https://api.citationcapture.com"
+  cloudBackendUrl: string; // default "https://obsidian-citation-capture.onrender.com"
   byokProvider: BYOKProvider; // default 'anthropic'
   byokApiKey?: string;
   byokModel?: string;

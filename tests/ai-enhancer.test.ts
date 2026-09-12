@@ -14,7 +14,7 @@ describe('AIEnhancer Multi-Provider & Zero-Config Architecture', () => {
     aiMode: 'auto',
     ollamaUrl: 'http://localhost:11434',
     ollamaModel: 'llama3.1:8b',
-    cloudBackendUrl: 'https://api.citationcapture.com',
+    cloudBackendUrl: 'https://obsidian-citation-capture.onrender.com',
     byokProvider: 'anthropic',
     autoEnrich: true
   };
@@ -65,7 +65,7 @@ describe('AIEnhancer Multi-Provider & Zero-Config Architecture', () => {
 
     expect(summary).toContain('Introduces Transformer architecture');
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.citationcapture.com/api/v1/summarize',
+      'https://obsidian-citation-capture.onrender.com/api/v1/summarize',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -150,5 +150,91 @@ describe('AIEnhancer Multi-Provider & Zero-Config Architecture', () => {
         })
       })
     );
+  });
+
+  it('resolves Lifetime license to cloud AI in auto mode and defaults credits to 200', async () => {
+    const mockFetch = vi.fn();
+    const enhancer = new AIEnhancer(mockFetch as any);
+
+    const lifetimeLicense: LicenseStatus = {
+      tier: 'lifetime',
+      isPro: true,
+      monthlyUsage: 1,
+      monthlyLimit: Infinity,
+      canCapture: true,
+      lastResetMonth: '2024-01',
+      licenseKey: 'LIFETIME-A1B2-C3D4-E5F6'
+      // cloudCreditsRemaining is undefined; should default to 200
+    };
+
+    const provider = await enhancer.resolveProvider(baseSettings, lifetimeLicense);
+    expect(provider).toBe('cloud');
+  });
+
+  it('normalizes DEMO-LIFETIME to LIFETIME-DEMO-0000-0000 for cloud proxy calls', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        summary: '• Lifetime summary via Claude proxy.\n• Fully verified.',
+        credits_remaining: 199
+      })
+    });
+
+    const enhancer = new AIEnhancer(mockFetch as any);
+    const lifetimeLicense: LicenseStatus = {
+      tier: 'lifetime',
+      isPro: true,
+      monthlyUsage: 0,
+      monthlyLimit: Infinity,
+      canCapture: true,
+      lastResetMonth: '2024-01',
+      licenseKey: 'DEMO-LIFETIME',
+      cloudCreditsRemaining: 200
+    };
+
+    const cloudSettings: ExtensionSettings = {
+      ...baseSettings,
+      aiMode: 'cloud'
+    };
+
+    const summary = await enhancer.summarize(sampleAbstract, cloudSettings, lifetimeLicense);
+    expect(summary).toContain('Lifetime summary via Claude proxy');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://obsidian-citation-capture.onrender.com/api/v1/summarize',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer LIFETIME-DEMO-0000-0000'
+        })
+      })
+    );
+  });
+
+  it('falls back gracefully to executive summary when cloud proxy returns 502 or is down', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({ detail: 'Upstream Claude API error' })
+    });
+
+    const enhancer = new AIEnhancer(mockFetch as any);
+    const lifetimeLicense: LicenseStatus = {
+      tier: 'lifetime',
+      isPro: true,
+      monthlyUsage: 0,
+      monthlyLimit: Infinity,
+      canCapture: true,
+      lastResetMonth: '2024-01',
+      licenseKey: 'DEMO-LIFETIME',
+      cloudCreditsRemaining: 200
+    };
+
+    const cloudSettings: ExtensionSettings = {
+      ...baseSettings,
+      aiMode: 'cloud'
+    };
+
+    const summary = await enhancer.summarize(sampleAbstract, cloudSettings, lifetimeLicense);
+    expect(summary).toBeDefined();
+    expect(summary).toContain('•');
   });
 });

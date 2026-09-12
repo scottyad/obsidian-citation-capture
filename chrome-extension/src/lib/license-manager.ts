@@ -40,7 +40,7 @@ export class LicenseManager {
     const canCapture = isPro || monthlyUsage < this.FREE_LIMIT;
 
     let cloudCreditsRemaining: number | undefined;
-    if (tier === 'pro_plus') {
+    if (tier === 'pro_plus' || tier === 'lifetime') {
       cloudCreditsRemaining = storageData[creditsKey] !== undefined
         ? Number(storageData[creditsKey])
         : this.DEFAULT_CLOUD_CREDITS;
@@ -113,7 +113,7 @@ export class LicenseManager {
         license_key: trimmed,
         license_tier: tier
       };
-      if (tier === 'pro_plus') {
+      if (tier === 'pro_plus' || tier === 'lifetime') {
         updates[`credits_${currentMonth}`] = this.DEFAULT_CLOUD_CREDITS;
       }
       await chrome.storage.local.set(updates);

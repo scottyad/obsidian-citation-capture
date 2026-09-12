@@ -1,0 +1,18 @@
+{
+  "LIFETIME-WRJ8-ZP7Q-KD5N": {
+    "key": "LIFETIME-WRJ8-ZP7Q-KD5N",
+    "tier": "lifetime",
+    "credits": 200,
+    "status": "active",
+    "customer_email": "scholar@university.edu",
+    "stripe_session_id": "mock-stripe-session"
+  },
+  "LIFETIME-BDT8-FW93-S9F3": {
+    "key": "LIFETIME-BDT8-FW93-S9F3",
+    "tier": "lifetime",
+    "credits": 200,
+    "status": "active",
+    "customer_email": "researcher@lab.org",
+    "stripe_session_id": "cs_test_mock_12345"
+  }
+}

@@ -47,3 +47,36 @@ def test_suggest_tags():
   data = res.json()
   assert isinstance(data["tags"], list)
   assert len(data["tags"]) > 0
+
+def test_stripe_create_checkout_session():
+  res = client.post(
+    "/api/v1/stripe/create-checkout-session",
+    json={"tier": "lifetime", "customer_email": "scholar@university.edu"}
+  )
+  assert res.status_code == 200
+  data = res.json()
+  assert "license_key" in data or "checkout_url" in data
+
+def test_stripe_webhook_provisions_key():
+  mock_event = {
+    "type": "checkout.session.completed",
+    "data": {
+      "object": {
+        "id": "cs_test_mock_12345",
+        "customer_details": {"email": "researcher@lab.org"},
+        "metadata": {"tier": "lifetime"}
+      }
+    }
+  }
+  res = client.post("/api/v1/stripe/webhook", json=mock_event)
+  assert res.status_code == 200
+  data = res.json()
+  assert data["status"] == "success"
+  assert data["license_key"].startswith("LIFETIME-")
+  assert data["customer_email"] == "researcher@lab.org"
+
+  # Verify the provisioned key can immediately be verified
+  key = data["license_key"]
+  verify_res = client.get("/api/v1/license/verify", headers={"Authorization": f"Bearer {key}"})
+  assert verify_res.status_code == 200
+  assert verify_res.json()["tier"] == "lifetime"

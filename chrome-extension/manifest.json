@@ -18,7 +18,8 @@
     "https://api.openalex.org/*",
     "https://eutils.ncbi.nlm.nih.gov/*",
     "http://localhost:11434/*",
-    "http://127.0.0.1:*/*"
+    "http://127.0.0.1:*/*",
+    "https://obsidian-citation-capture.onrender.com/*"
   ],
   "background": {
     "service_worker": "background.js",

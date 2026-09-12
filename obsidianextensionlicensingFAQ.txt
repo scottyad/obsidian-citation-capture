@@ -1,0 +1,132 @@
+I added 1-line shortcuts in your project so you don't have to remember any flags:
+
+1. Generate a Pro Key:
+bash
+
+
+npm run key:pro
+Output:
+
+text
+
+
+========================================
+🔑 TIER: PRO (Unlimited Captures • Local Ollama / BYOK • No Cloud AI)
+========================================
+Key:    PRO-J343-PHM5-M9YL
+========================================
+2. Generate a Lifetime Key:
+bash
+
+
+npm run key:lifetime
+Output:
+
+text
+
+
+========================================
+🔑 TIER: LIFETIME (Permanent Unlimited Captures + 200 Cloud AI Credits/mo)
+========================================
+Key:    LIFETIME-4FQF-T65F-A3RA
+========================================
+3. Generate a Pro+ Subscription Key:
+bash
+
+
+npm run key:proplus
+Output:
+
+text
+
+
+========================================
+🔑 TIER: PRO+ (Monthly Subscription • Unlimited Captures + 200 Cloud AI Credits/mo)
+========================================
+Key:    PROPLUS-V8ZD-H5X6-LWFU
+========================================
+Generating Multiple Keys (Batch)
+If you want to generate a batch of keys for Gumroad, LemonSqueezy, or CSV export:
+
+bash
+
+
+# Generate 5 Pro keys
+npm run generate-keys -- --tier pro --count 5
+# Generate 50 Lifetime keys and save to a CSV file
+npm run generate-keys -- --tier lifetime --count 50 --format csv --out lifetime_keys.csv
+
+To sell and automatically issue license keys through Stripe, you have two approaches depending on whether you want a full webhook backend or a zero-maintenance pre-generated workflow.
+
+Option 1: Direct Stripe Integration (Automated Webhooks)
+I have already implemented the Stripe webhook and checkout endpoints in your backend (
+backend/main.py
+ and 
+backend/stripe_handler.py
+).
+
+How It Works:
+Mermaid diagram
+Step 1: Create Products in Stripe Dashboard
+Go to Stripe Dashboard 
+→
+→ Product catalog 
+→
+→ Add product.
+Create your products:
+Obsidian Citation Capture Lifetime (e.g., $79 one-time)
+In Metadata, add: tier = lifetime
+Obsidian Citation Capture Pro (e.g., $29 one-time or $3/mo)
+In Metadata, add: tier = pro
+Obsidian Citation Capture Pro+ (e.g., $5/mo subscription)
+In Metadata, add: tier = pro_plus
+Step 2: Set Up the Webhook in Stripe
+In Stripe Dashboard, go to Developers 
+→
+→ Webhooks 
+→
+→ Add an endpoint.
+Endpoint URL: https://your-backend-url.onrender.com/api/v1/stripe/webhook
+Select events to listen for: Check checkout.session.completed.
+Copy the Signing secret (whsec_...).
+Step 3: Add Environment Variables to Your Server
+In your Render / hosting dashboard (or .env file):
+
+bash
+
+
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+Step 4: Test Locally with the Stripe CLI
+You can test this right now on your machine:
+
+bash
+
+
+# 1. Start Stripe forwarding to your local server
+stripe listen --forward-to localhost:8000/api/v1/stripe/webhook
+# 2. Trigger a test checkout completion in another terminal
+stripe trigger checkout.session.completed
+Your backend will automatically:
+
+Detect whether the customer bought lifetime, pro, or pro_plus.
+Generate a valid key (e.g. LIFETIME-XXXX-XXXX-XXXX).
+Save it to backend/licenses.json (persists across restarts).
+Register the user with 200 monthly Cloud AI credits if Lifetime or Pro+.
+Option 2: The "Zero-Code" Way (Lemon Squeezy or Gumroad)
+If you don't want to manage webhook signatures, email delivery, or international sales tax / EU VAT yourself, many Chrome extension developers use Lemon Squeezy or Gumroad (which run on Stripe under the hood as Merchant of Record):
+
+Export a batch of 100 Lifetime keys to CSV:
+bash
+
+
+node scripts/generate-license-keys.mjs --tier lifetime --count 100 --format csv --out lifetime_keys.csv
+In Lemon Squeezy / Gumroad:
+Create product 
+→
+→ enable License Keys.
+Select Upload pre-generated keys and upload lifetime_keys.csv.
+Done! Whenever someone purchases:
+Lemon Squeezy/Gumroad automatically pops off the next key from your list.
+It displays the key on their receipt screen and emails it to them.
+The user pastes LIFETIME-XXXX-XXXX-XXXX into your extension, and it unlocks instantly.

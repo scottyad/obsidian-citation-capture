@@ -14,7 +14,13 @@
     "build:chrome": "npm --prefix chrome-extension run build",
     "build:obsidian": "npm --prefix obsidian-plugin run build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "generate-keys": "node scripts/generate-license-keys.mjs",
+    "key:lifetime": "node scripts/generate-license-keys.mjs --tier lifetime",
+    "key:pro": "node scripts/generate-license-keys.mjs --tier pro",
+    "key:proplus": "node scripts/generate-license-keys.mjs --tier proplus",
+    "server:start": "cd backend && ./run.sh",
+    "server:test": "cd backend && pytest tests/test_server.py -v",
+    "server:generate-keys": "cd backend && python -c \"import database as db; print([db.create_license('lifetime')['key'] for _ in range(int(input('Count: ')))])\""
   },
   "devDependencies": {
     "@types/node": "^20.11.24",

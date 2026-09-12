@@ -48,7 +48,15 @@ function setStatus(text: string, loading: boolean = false) {
 
 function updateLicenseUI(status: LicenseStatus) {
   currentLicense = status;
-  if (status.isPro) {
+  const isCloudTier = status.tier === 'lifetime' || status.tier === 'pro_plus';
+  if (isCloudTier) {
+    tierBadge.textContent = status.tier === 'lifetime' ? 'LIFETIME' : 'PRO+ CLOUD';
+    tierBadge.className = 'badge badge-pro';
+    const credits = status.cloudCreditsRemaining ?? 200;
+    quotaCounter.textContent = `Unlimited Captures • ${credits} Cloud AI Credits`;
+    quotaWarning.classList.add('hidden');
+    btnCapture.disabled = false;
+  } else if (status.isPro) {
     tierBadge.textContent = status.tier.toUpperCase();
     tierBadge.className = 'badge badge-pro';
     quotaCounter.textContent = 'Unlimited Captures (Pro)';
@@ -184,9 +192,14 @@ async function runEnrichment() {
   }
 
   isEnriching = true;
-  setStatus('✨ Generating AI summary via Ollama...', true);
+  const isCloudEligible = currentLicense?.tier === 'pro_plus' || currentLicense?.tier === 'lifetime';
+  const isCloud = currentSettings?.aiMode === 'cloud' ||
+    (currentSettings?.aiMode === 'auto' && isCloudEligible && (currentLicense?.cloudCreditsRemaining ?? 200) > 0);
+  const providerLabel = isCloud ? 'Claude (Cloud AI)' : currentSettings?.aiMode === 'byok' ? 'BYOK' : 'Ollama';
+
+  setStatus(`✨ Generating AI summary via ${providerLabel}...`, true);
   if (aiStatusBadge) {
-    aiStatusBadge.textContent = 'Summarizing...';
+    aiStatusBadge.textContent = isCloud ? 'Claude AI...' : 'Summarizing...';
     aiStatusBadge.style.color = '#fed7aa';
     aiStatusBadge.style.borderColor = '#f97316';
     aiStatusBadge.style.background = 'rgba(249, 115, 22, 0.2)';
@@ -215,7 +228,13 @@ async function runEnrichment() {
       aiLoadingHint.classList.add('hidden');
     }
     if (currentCitation?.aiSummary) {
-      setStatus('✨ AI summary & metadata ready.');
+      setStatus(`✨ AI summary (${providerLabel}) & metadata ready.`);
+      if (aiStatusBadge) {
+        aiStatusBadge.textContent = isCloud ? '✨ Claude' : '✨ AI Generated';
+        aiStatusBadge.style.color = '#a7f3d0';
+        aiStatusBadge.style.borderColor = '#10b981';
+        aiStatusBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+      }
     } else {
       setStatus('Ready to capture.');
     }

@@ -17,7 +17,7 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   aiMode: 'auto',
   ollamaUrl: 'http://localhost:11434',
   ollamaModel: 'llama3.1:8b',
-  cloudBackendUrl: 'https://api.citationcapture.com',
+  cloudBackendUrl: 'https://obsidian-citation-capture.onrender.com',
   byokProvider: 'anthropic',
   autoEnrich: true,
   overwriteExisting: false
@@ -28,6 +28,9 @@ async function getStoredSettings(): Promise<ExtensionSettings> {
   const settings: ExtensionSettings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
   if (settings.vaultName === 'ResearchVault') {
     settings.vaultName = '';
+  }
+  if (!settings.cloudBackendUrl || settings.cloudBackendUrl === 'https://api.citationcapture.com') {
+    settings.cloudBackendUrl = 'https://obsidian-citation-capture.onrender.com';
   }
   return settings;
 }
@@ -195,11 +198,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Multi-tier AI enrichment (Auto-detected: Ollama, Cloud Haiku, or BYOK)
             try {
               const ai = new AIEnhancer();
+              const provider = await ai.resolveProvider(settings, licenseStatus);
               if (data.abstract && !data.aiSummary) {
                 const summary = await ai.summarize(data.abstract, settings, licenseStatus);
                 if (summary) {
                   data.aiSummary = summary;
-                  if (licenseStatus.tier === 'pro_plus') {
+                  if (provider === 'cloud' && (licenseStatus.tier === 'pro_plus' || licenseStatus.tier === 'lifetime')) {
                     await LicenseManager.deductCloudCredit();
                   }
                 }

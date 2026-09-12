@@ -55,10 +55,11 @@ function updateAIUI() {
 }
 
 function updateLicenseUI(status: LicenseStatus) {
-  const tierName = status.tier === 'pro_plus' ? 'PRO+ CLOUD AI' : `${status.tier.toUpperCase()} TIER`;
+  const isCloudEligible = status.tier === 'pro_plus' || status.tier === 'lifetime';
+  const tierName = isCloudEligible ? 'PRO+ CLOUD AI' : `${status.tier.toUpperCase()} TIER`;
   tierDisplay.textContent = tierName;
 
-  if (status.tier === 'pro_plus') {
+  if (isCloudEligible) {
     tierDisplay.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
     const credits = status.cloudCreditsRemaining ?? 200;
     usageText.textContent = `Unlimited captures active • ${credits} Cloud AI credits remaining this month`;
@@ -90,7 +91,10 @@ async function loadSettings() {
     templateInput.value = s.template || DEFAULT_TEMPLATE;
 
     aiModeSelect.value = s.aiMode || 'auto';
-    cloudBackendUrlInput.value = s.cloudBackendUrl || 'https://api.citationcapture.com';
+    const rawCloudUrl = s.cloudBackendUrl?.trim();
+    cloudBackendUrlInput.value = (!rawCloudUrl || rawCloudUrl === 'https://api.citationcapture.com')
+      ? 'https://obsidian-citation-capture.onrender.com'
+      : rawCloudUrl;
     ollamaUrlInput.value = s.ollamaUrl || 'http://localhost:11434';
     ollamaModelInput.value = s.ollamaModel || 'llama3.1:8b';
     byokProviderSelect.value = s.byokProvider || 'anthropic';
@@ -163,7 +167,7 @@ async function saveSettings() {
     template: templateInput.value.trim() || DEFAULT_TEMPLATE,
     citationFormat: 'bibtex',
     aiMode: aiModeSelect.value as any,
-    cloudBackendUrl: cloudBackendUrlInput.value.trim() || 'https://api.citationcapture.com',
+    cloudBackendUrl: cloudBackendUrlInput.value.trim() || 'https://obsidian-citation-capture.onrender.com',
     ollamaUrl: ollamaUrlInput.value.trim() || 'http://localhost:11434',
     ollamaModel: ollamaModelInput.value.trim() || 'llama3.2:1b',
     byokProvider: byokProviderSelect.value as any,
