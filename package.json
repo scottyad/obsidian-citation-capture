@@ -1,5 +1,6 @@
 {
   "name": "obsidian-citation-capture-monorepo",
+  "license": "MIT",
   "version": "1.0.0",
   "private": true,
   "description": "Academic Citation to Obsidian Capture - Chrome Extension and Obsidian Plugin Monorepo",

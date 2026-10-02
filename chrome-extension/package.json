@@ -1,5 +1,6 @@
 {
   "name": "citation-capture-chrome-extension",
+  "license": "MIT",
   "version": "1.0.0",
   "private": true,
   "description": "Chrome Extension for capturing academic citations to Obsidian",

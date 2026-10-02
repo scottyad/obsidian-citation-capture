@@ -168,3 +168,7 @@ npm test
 # Run Python Backend tests (5 tests)
 cd backend && uv run --with fastapi --with pydantic --with pytest --with httpx pytest test_backend.py
 ```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE). Third-party dependencies retain their respective licenses.

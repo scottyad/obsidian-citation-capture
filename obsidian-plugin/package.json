@@ -1,5 +1,6 @@
 {
   "name": "obsidian-citation-capture-plugin",
+  "license": "MIT",
   "version": "1.0.0",
   "description": "Companion Obsidian plugin for Obsidian Citation Capture Chrome Extension",
   "main": "main.js",
