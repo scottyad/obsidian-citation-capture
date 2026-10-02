@@ -214,6 +214,7 @@ async def summarize(
       response = anthropic_client.messages.create(
         model=ANTHROPIC_MODEL,
         max_tokens=300,
+        cache_control={"type": "ephemeral"},
         messages=[{"role": "user", "content": prompt}]
       )
       summary_text = response.content[0].text.strip()

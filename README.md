@@ -172,3 +172,7 @@ cd backend && uv run --with fastapi --with pydantic --with pytest --with httpx p
 ## License
 
 This project is licensed under the [MIT License](LICENSE). Third-party dependencies retain their respective licenses.
+
+### Anthropic prompt caching
+
+Cloud summary requests and direct Anthropic BYOK requests use five-minute ephemeral prompt caching. Repeated eligible prompt prefixes can be reused; short prompts below the selected model’s minimum do not cache. Cache writes cost more than normal input, so do not add padding or switch to a more expensive model just to qualify. Live cloud services log cache read/write token counts without logging document contents or API keys.

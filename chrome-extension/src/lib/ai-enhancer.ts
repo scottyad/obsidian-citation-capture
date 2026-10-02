@@ -241,6 +241,7 @@ export class AIEnhancer {
           },
           body: JSON.stringify({
             model: settings.byokModel || 'claude-3-haiku-20240307',
+            cache_control: { type: "ephemeral" },
             max_tokens: 300,
             messages: [{ role: 'user', content: `Summarize this academic abstract in 2 bullet points:\n\n${abstract}` }]
           })
@@ -320,6 +321,7 @@ export class AIEnhancer {
           },
           body: JSON.stringify({
             model: settings.byokModel || 'claude-3-haiku-20240307',
+            cache_control: { type: "ephemeral" },
             max_tokens: 150,
             messages: [{ role: 'user', content: prompt }]
           })
