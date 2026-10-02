@@ -176,3 +176,7 @@ This project is licensed under the [MIT License](LICENSE). Third-party dependenc
 ### Anthropic prompt caching
 
 Cloud summary requests and direct Anthropic BYOK requests use five-minute ephemeral prompt caching. Repeated eligible prompt prefixes can be reused; short prompts below the selected model’s minimum do not cache. Cache writes cost more than normal input, so do not add padding or switch to a more expensive model just to qualify. Live cloud services log cache read/write token counts without logging document contents or API keys.
+
+### Private API usage report
+
+Run `python backend/api_usage.py` on the backend host for the rolling 30-day Anthropic request and token totals. The SQLite ledger starts when this version is installed, separates hosted and BYOK credentials, and contains no prompts, document content, keys, or user identifiers. Counts represent SDK message-create invocations, including explicit model fallback attempts; internal SDK HTTP retries are not separately counted. Direct browser BYOK calls and local/Ollama requests do not pass through this backend ledger. No public reporting endpoint is exposed.

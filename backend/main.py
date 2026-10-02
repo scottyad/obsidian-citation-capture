@@ -1,3 +1,4 @@
+from api_usage import TrackedClient
 """
 Obsidian Citation Capture — Cloud AI Backend Proxy
 FastAPI proxy providing Claude 3 Haiku summaries, research tag suggestions,
